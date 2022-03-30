@@ -49,8 +49,8 @@ STACKS_BASE = "https://stacks.stanford.edu/file/"
 NS = {"x": "http://www.loc.gov/mods/v3"}
 
 MIDI_DIR = "midi"
-TXT_DIR = "txt"
-IIIF_DIR = "manifests"
+TXT_DIR = "input/txt"
+IIIF_DIR = "input/manifests"
 
 
 def get_metadata_for_druid(druid, redownload_mods):
@@ -77,7 +77,7 @@ def get_metadata_for_druid(druid, redownload_mods):
                 return value
         return value
 
-    mods_filepath = Path(f"mods/{druid}.mods")
+    mods_filepath = Path(f"input/mods/{druid}.mods")
 
     if not mods_filepath.exists() or redownload_mods:
         response = requests.get(f"{PURL_BASE}{druid}.mods")
@@ -200,7 +200,7 @@ def get_iiif_manifest(druid, redownload_manifests, iiif_source_dir):
     Digital Repository, then loads it into the iiif_manifest dictionary.
     """
 
-    target_iiif_filepath = Path(f"manifests/{druid}.json")
+    target_iiif_filepath = Path(f"input/manifests/{druid}.json")
     source_iiif_filepath = Path(f"{iiif_source_dir}/{druid}.json")
     if (
         not target_iiif_filepath.exists()
@@ -434,20 +434,20 @@ def get_druids_from_txt_file(druids_fp):
 
 def get_druids_from_csv_files():
     """Runs get_druids_from_csv_file() on all of the CSV files in the druids/
-    folder."""
+    input folder."""
 
     druids_list = []
-    for druid_file in Path("druids/").glob("*.csv"):
+    for druid_file in Path("input/druids/").glob("*.csv"):
         druids_list.extend(get_druids_from_csv_file(druid_file))
     return druids_list
 
 
 def get_druids_from_txt_files():
     """Runs get_druids_from_txt_file() on all of the text files in the druids/
-    folder."""
+    input folder."""
 
     druids_list = []
-    for druid_file in Path("druids/").glob("*.txt"):
+    for druid_file in Path("input/druids/").glob("*.txt"):
         druids_list.extend(get_druids_from_txt_file(druid_file))
     return druids_list
 
@@ -546,9 +546,9 @@ def main():
                        with one DRUID per line (using the -f option), or in
                        a CSV file with DRUIDs in the column with the header
                        "Druid" (-c option). If no DRUIDs are supplied, the
-                       script will search the druids/ folder for text or CSV
-                       files and will process all of the DRUIDs it finds listed
-                       there.
+                       script will search the input/druids/ folder for text or
+                       CSV files and will process all of the DRUIDs it finds
+                       listed there.
                     """
     )
     argparser.add_argument(
@@ -579,12 +579,12 @@ def main():
     argparser.add_argument(
         "--redownload-mods",
         action="store_true",
-        help="Always download MODS files, overwriting files in mods/",
+        help="Always download MODS files, overwriting files in input/mods/",
     )
     argparser.add_argument(
         "--use-exp-midi",
         action="store_true",
-        help="Use expressionized MIDI for output .mid files in midi/ (default is to use note MIDI)",
+        help="Use expressionized MIDI for output .mid files (default is to use note MIDI)",
     )
     argparser.add_argument(
         "--midi-source-dir",
