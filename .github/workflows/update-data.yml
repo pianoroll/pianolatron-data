@@ -24,7 +24,13 @@ jobs:
         uses: actions/setup-python@v3
         
       - name: install pipenv
-        run:  pip install pipenv
+        run: |
+          pip install --user pipenv
+          USER_BASE=`python -m site --user-base`
+          echo $USER_BASE
+          export PATH=$USER_BASE/bin:$PATH
+          echo $PATH
+          echo `which pipenv`
         
       - name: install Python dependencies
         run: pipenv install
