@@ -642,6 +642,7 @@ def main():
         metadata = get_metadata_for_druid(druid, args.redownload_mods)
         if metadata is None:
             logging.info(f"Unable to get metadata for DRUID {druid}, skipping")
+            continue
 
         iiif_manifest = get_iiif_manifest(
             druid, args.redownload_manifests, args.iiif_source_dir
