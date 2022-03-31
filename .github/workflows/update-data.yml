@@ -49,9 +49,9 @@ jobs:
         run: pipenv run python build-pianolatron-files.py
         
       - name: commit the new/updated output files to the repo
-        uses: EndBug/add-and-commit@v7
+        uses: EndBug/add-and-commit@v9.0.0
         with:
-          add: 'output/json/*.json' 'output/midi/*.mid' 'midi/exp/*.mid' 'midi/note/*.mid'
+          add: '["output/json/*.json","output/midi/*.mid","midi/exp/*.mid","midi/note/*.mid"]'
           message: 'Automatic update'
           author_name: GitHub Actions
           author_email: actions@github.com
