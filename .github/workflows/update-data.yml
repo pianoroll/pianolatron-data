@@ -43,12 +43,13 @@ jobs:
           git spare-scheckout init --cone
           git sparse-checkout add "midi/exp" "midi/note"
           git checkout
+          ls
           
       - name: partially clone roll-wrangler analysis (txt) files
         run: |
           cd input
           git clone --filter=blob:none --no-checkout --depth 1 --sparse https://github.com/pianoroll/roll-wrangler.git
-          git spare-scheckout init --cone
+          git sparse-checkout init --cone
           git sparse-checkout add "txt"
           git checkout
           cd ..
