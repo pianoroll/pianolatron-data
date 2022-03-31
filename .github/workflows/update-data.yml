@@ -31,21 +31,20 @@ jobs:
           USER_BASE=`python -m site --user-base`
           echo $USER_BASE
           export PATH=$USER_BASE/bin:$PATH
-          echo $PATH
-          echo `which pipenv`
-          echo `pwd`
         
       - name: install Python dependencies
         run: pipenv install
       
       - name: partially clone roll-wrangler MIDI and txt files
         run: |
-          git clone --filter=blob:none --no-checkout --depth 1 --sparse https://github.com/pianoroll/roll-wrangler.git
-          git sparse-checkout init --cone
-          git sparse-checkout add "midi/exp" "midi/note" "txt"
+          git clone --filter=blob:none --no-checkout --depth 2 --sparse https://github.com/pianoroll/roll-wrangler.git
+          git sparse-checkout init
+          git sparse-checkout add "txt" "midi/exp" "midi/note"
           git checkout
           ls
-          ls roll-wrangler
+          ls roll-wrangler/
+          ls roll-wrangler/txt
+          ls roll-wrangler/midi
           echo `pwd`
         
       - name: move roll-wrangler files to expected locations
