@@ -544,14 +544,6 @@
     "type": "welte-red"
   },
   {
-    "druid": "zf037wk3650",
-    "image_url": "https://stacks.stanford.edu/image/iiif/zf037wk3650%2Fzf037wk3650_0001/info.json",
-    "number": "1127",
-    "publisher": "Welte-Mignon",
-    "title": "Chaminade/Uzielli - Pierrette: air de ballet, op. 41",
-    "type": "welte-red"
-  },
-  {
     "druid": "ms604gp1206",
     "image_url": "https://stacks.stanford.edu/image/iiif/ms604gp1206%2Fms604gp1206_0002/info.json",
     "number": "4466",
@@ -1173,7 +1165,7 @@
     "number": "3398",
     "publisher": "Welte-Mignon",
     "title": "Delibes-Dohnányi/Blumen - \"naïla\": Walzer",
-    "type": "welte-red"
+    "type": "88-note"
   },
   {
     "druid": "xn585zh2707",
@@ -1821,7 +1813,7 @@
     "number": "2703",
     "publisher": "Welte-Mignon",
     "title": "Liszt-Vetter/Lohr - Ii. ungarische rhapsodie: mit Cadenz von Prof. H. Vetter",
-    "type": "welte-red"
+    "type": "88-note"
   },
   {
     "druid": "vs059bb4318",
@@ -3589,7 +3581,7 @@
     "number": "445",
     "publisher": "Welte-Mignon",
     "title": "Verdi-Liszt/Busoni - Rigoletto: (paraphrase)",
-    "type": "welte-red"
+    "type": "88-note"
   },
   {
     "druid": "np204br1080",
@@ -3717,7 +3709,7 @@
     "number": "3019",
     "publisher": "Welte-Mignon",
     "title": "Wagner-Rybner/Rybner - Die Meistersinger von nürnberg: Konzert-Paraphrase",
-    "type": "welte-red"
+    "type": "88-note"
   },
   {
     "druid": "yr287jf4422",
@@ -3797,7 +3789,7 @@
     "number": "2539",
     "publisher": "N/A",
     "title": "Waldteufel - Très jolie: suite de valses",
-    "type": "88-note"
+    "type": "65-note"
   },
   {
     "druid": "xg670df7262",
