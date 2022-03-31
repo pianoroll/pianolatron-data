@@ -35,12 +35,9 @@ jobs:
       - name: install Python dependencies
         run: pipenv install
       
-      - name: partially clone roll-wrangler MIDI and txt files
+      - name: clone roll-wrangler repo
         run: |
-          git clone --no-checkout --depth 2 --sparse https://github.com/pianoroll/roll-wrangler.git
-          git sparse-checkout init
-          git sparse-checkout add "txt" "midi/exp" "midi/note"
-          git checkout
+          git clone https://github.com/pianoroll/roll-wrangler.git
           ls
           ls roll-wrangler/
           ls roll-wrangler/txt
