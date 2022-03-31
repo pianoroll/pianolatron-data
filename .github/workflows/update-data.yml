@@ -37,7 +37,7 @@ jobs:
       
       - name: partially clone roll-wrangler MIDI and txt files
         run: |
-          git clone --filter=blob:none --no-checkout --depth 2 --sparse https://github.com/pianoroll/roll-wrangler.git
+          git clone --no-checkout --depth 2 --sparse https://github.com/pianoroll/roll-wrangler.git
           git sparse-checkout init
           git sparse-checkout add "txt" "midi/exp" "midi/note"
           git checkout
