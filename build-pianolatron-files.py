@@ -81,7 +81,14 @@ def get_metadata_for_druid(druid, redownload_mods):
 
     if not mods_filepath.exists() or redownload_mods:
         response = requests.get(f"{PURL_BASE}{druid}.mods")
-        xml_tree = etree.fromstring(response.content)
+        try:
+            xml_tree = etree.fromstring(response.content)
+        except etree.XMLSyntaxError:
+            logging.error(
+                f"Unable to parse MODS metadata for {druid} - record is likely missing."
+            )
+            return None
+
         with mods_filepath.open("w") as _fh:
             _fh.write(etree.tostring(xml_tree, encoding="unicode", pretty_print=True))
     else:
@@ -633,6 +640,8 @@ def main():
         logging.info(f"Processing {druid}...")
 
         metadata = get_metadata_for_druid(druid, args.redownload_mods)
+        if metadata is None:
+            logging.info(f"Unable to get metadata for DRUID {druid}, skipping")
 
         iiif_manifest = get_iiif_manifest(
             druid, args.redownload_manifests, args.iiif_source_dir
