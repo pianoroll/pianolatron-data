@@ -33,6 +33,7 @@ jobs:
           export PATH=$USER_BASE/bin:$PATH
           echo $PATH
           echo `which pipenv`
+          echo `pwd`
         
       - name: install Python dependencies
         run: pipenv install
@@ -45,12 +46,13 @@ jobs:
           git checkout
           ls
           ls roll-wrangler
+          echo `pwd`
         
       - name: move roll-wrangler files to expected locations
         run: |
-          mv roll-wrangler/midi/note/*.mid midi/note/.
-          mv roll-wrangler/midi/exp/*.mid midi/exp/.
-          mv roll-wrangler/txt/*.txt input/txt/.
+          mv ./roll-wrangler/midi/note/*.mid midi/note/.
+          mv ./roll-wrangler/midi/exp/*.mid midi/exp/.
+          mv ./roll-wrangler/txt/*.txt input/txt/.
         
       - name: run the data generation script
         run: pipenv run python build-pianolatron-files.py
