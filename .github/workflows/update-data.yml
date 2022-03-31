@@ -43,6 +43,8 @@ jobs:
           git sparse-checkout init --cone
           git sparse-checkout add "midi/exp" "midi/note" "txt"
           git checkout
+          ls
+          ls roll-wrangler
         
       - name: move roll-wrangler files to expected locations
         run: |
