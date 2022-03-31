@@ -1,0 +1,57 @@
+name: update-data
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+  
+  #schedule:
+  #  - cron: "0 0 1 * *" # Runs at 00:00 UTC on the first of every month 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout repo content
+        uses: actions/checkout@v3
+
+      - name: setup python
+        uses: actions/setup-python@v3
+        
+      - name: install pipenv
+        run:  pip install pipenv
+        
+      - name: install Python dependencies
+        run: pipenv install
+      
+      - name: partially clone roll-wrangler MIDI files
+        run: |
+          git clone --filter=blob:none --no-checkout --depth 1 --sparse https://github.com/pianoroll/roll-wrangler.git
+          git spare-scheckout init --cone
+          git sparse-checkout add "midi/exp" "midi/note"
+          git checkout
+          
+      - name: partially clone roll-wrangler analysis (txt) files
+        run: |
+          cd input
+          git clone --filter=blob:none --no-checkout --depth 1 --sparse https://github.com/pianoroll/roll-wrangler.git
+          git spare-scheckout init --cone
+          git sparse-checkout add "txt"
+          git checkout
+          cd ..
+        
+      - name: run the data generation script
+        run: pipenv run python build-pianolatron-files.py
+        
+      - name: commit the new/updated output files to the repo
+        uses: EndBug/add-and-commit@v7
+        with:
+          add: 'output/json/*.json' 'output/midi/*.mid' 'midi/exp/*.mid' 'midi/note/*.mid'
+          message: 'Automatic update'
+          author_name: GitHub Actions
+          author_email: actions@github.com
