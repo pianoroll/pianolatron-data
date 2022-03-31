@@ -37,22 +37,18 @@ jobs:
       - name: install Python dependencies
         run: pipenv install
       
-      - name: partially clone roll-wrangler MIDI files
+      - name: partially clone roll-wrangler MIDI and txt files
         run: |
           git clone --filter=blob:none --no-checkout --depth 1 --sparse https://github.com/pianoroll/roll-wrangler.git
           git sparse-checkout init --cone
-          git sparse-checkout add "midi/exp" "midi/note"
+          git sparse-checkout add "midi/exp" "midi/note" "txt"
           git checkout
-          ls
-          
-      - name: partially clone roll-wrangler analysis (txt) files
+        
+      - name: move roll-wrangler files to expected locations
         run: |
-          cd input
-          git clone --filter=blob:none --no-checkout --depth 1 --sparse https://github.com/pianoroll/roll-wrangler.git
-          git sparse-checkout init --cone
-          git sparse-checkout add "txt"
-          git checkout
-          cd ..
+          mv roll-wrangler/midi/note/*.mid midi/note/.
+          mv roll-wrangler/midi/exp/*.mid midi/exp/.
+          mv roll-wrangler/txt/*.txt input/txt/.
         
       - name: run the data generation script
         run: pipenv run python build-pianolatron-files.py
@@ -60,7 +56,7 @@ jobs:
       - name: commit the new/updated output files to the repo
         uses: EndBug/add-and-commit@v9.0.0
         with:
-          add: '["output/json/*.json","output/midi/*.mid","midi/exp/*.mid","midi/note/*.mid"]'
+          add: '["output/json/*.json","output/midi/*.mid","midi/exp/*.mid","midi/note/*.mid","output/catalog.json"]'
           message: 'Automatic update'
           author_name: GitHub Actions
           author_email: actions@github.com
