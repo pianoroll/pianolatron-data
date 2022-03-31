@@ -1,6 +1,5 @@
 name: update-data
 
-# Controls when the workflow will run
 on:
   push:
     branches: [ main ]
@@ -38,11 +37,6 @@ jobs:
       - name: clone roll-wrangler repo
         run: |
           git clone https://github.com/pianoroll/roll-wrangler.git
-          ls
-          ls roll-wrangler/
-          ls roll-wrangler/txt
-          ls roll-wrangler/midi
-          echo `pwd`
         
       - name: move roll-wrangler files to expected locations
         run: |
