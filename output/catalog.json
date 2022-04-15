@@ -480,6 +480,14 @@
     "type": "welte-red"
   },
   {
+    "druid": "hm136vg1420",
+    "image_url": "https://stacks.stanford.edu/image/iiif/hm136vg1420%2Fhm136vg1420_00_0001/info.json",
+    "number": "386",
+    "publisher": "Welte-Mignon",
+    "title": "Brahms/Schnabel - Intermezzo c dur, op. 119, no. 3",
+    "type": "welte-red"
+  },
+  {
     "druid": "ht999gf1829",
     "image_url": "https://stacks.stanford.edu/image/iiif/ht999gf1829%2Fht999gf1829_0002/info.json",
     "number": "2191",
@@ -541,6 +549,14 @@
     "number": "2540",
     "publisher": "Welte-Mignon",
     "title": "Chaminade/Mero - La Lisonjera",
+    "type": "welte-red"
+  },
+  {
+    "druid": "zf037wk3650",
+    "image_url": "https://stacks.stanford.edu/image/iiif/zf037wk3650%2Fzf037wk3650_0001/info.json",
+    "number": "1127",
+    "publisher": "Welte-Mignon",
+    "title": "Chaminade/Uzielli - Pierrette: air de ballet, op. 41",
     "type": "welte-red"
   },
   {
