@@ -23,7 +23,8 @@ import requests
 WRITE_TEMPO_MAPS = False
 
 # These are either duplicates of existing rolls, or rolls that are listed in
-# the DRUIDs files but have since disappeared from the library catalog
+# the DRUIDs files but have since disappeared from the library catalog,
+# or rolls that were accessioned incorrectly (hm136vg1420)
 ROLLS_TO_SKIP = ["rr052wh1991", "hm136vg1420"]
 
 ROLL_TYPES = {
