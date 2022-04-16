@@ -96,20 +96,21 @@ def get_metadata_for_druid(druid, redownload_mods):
         xml_tree = etree.parse(mods_filepath.open())
 
     # The representation of the roll type in the MODS metadata continues to
-    # evolve, but this logic should work
+    # evolve. Hopefully this logic covers all cases.
     roll_type = "NA"
     type_note = get_value_by_xpath(
         "x:physicalDescription/x:note[@displayLabel='Roll type']/text()"
     )
-    if type_note is not None and type_note in ROLL_TYPES:
-        roll_type = ROLL_TYPES[type_note]
     scale_note = get_value_by_xpath(
         "x:physicalDescription/x:note[@displayLabel='Scale']/text()"
     )
-    if scale_note is not None and scale_note in ROLL_TYPES:
+    if type_note is not None and type_note in ROLL_TYPES:
+        roll_type = ROLL_TYPES[type_note]
+    
+    if scale_note is not None and scale_note in ROLL_TYPES and (roll_type == "NA" or type_note == "standard"):
         roll_type = ROLL_TYPES[scale_note]
-
-    if roll_type == "NA":
+    
+    if roll_type == "NA" or type_note == "standard":
         for note in xml_tree.xpath("(x:note)", namespaces=NS):
             if note is not None and note.text in ROLL_TYPES:
                 roll_type = ROLL_TYPES[note.text]
@@ -671,6 +672,8 @@ def main():
         roll_data, hole_data = get_hole_report_data(druid, args.analysis_source_dir)
 
         metadata = refine_metadata(metadata)
+
+        logging.info(f"Roll type is {metadata['type']}...")
 
         # Add roll-level hole report info to the metadata
         for key in roll_data:
