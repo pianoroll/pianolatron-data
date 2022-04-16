@@ -106,10 +106,14 @@ def get_metadata_for_druid(druid, redownload_mods):
     )
     if type_note is not None and type_note in ROLL_TYPES:
         roll_type = ROLL_TYPES[type_note]
-    
-    if scale_note is not None and scale_note in ROLL_TYPES and (roll_type == "NA" or type_note == "standard"):
+
+    if (
+        scale_note is not None
+        and scale_note in ROLL_TYPES
+        and (roll_type == "NA" or type_note == "standard")
+    ):
         roll_type = ROLL_TYPES[scale_note]
-    
+
     if roll_type == "NA" or type_note == "standard":
         for note in xml_tree.xpath("(x:note)", namespaces=NS):
             if note is not None and note.text in ROLL_TYPES:
@@ -257,7 +261,7 @@ def build_tempo_map_from_midi(druid):
     return tempo_map
 
 
-def merge_midi_velocities(roll_data, hole_data, druid):
+def merge_midi_velocities(roll_data, hole_data, druid, roll_type):
     """Parses the output MIDI file for the roll specified by the input DRUID
     and aligns the velocities assigned to each note event to the detected holes
     in the provided hole_data input, which is derived from the roll image
@@ -279,7 +283,11 @@ def merge_midi_velocities(roll_data, hole_data, druid):
 
     tick_notes_velocities = {}
 
-    for note_track in midi.tracks[1:3]:
+    total_note_tracks = 2
+    if roll_type == "65-note":
+        total_note_tracks = 1
+
+    for note_track in midi.tracks[1 : 1 + total_note_tracks]:
         current_tick = 0
         for event in note_track:
             current_tick += event.time
@@ -653,6 +661,9 @@ def main():
         if (
             not args.use_exp_midi
             and Path(f"{args.midi_source_dir}/note/{druid}_note.mid").exists()
+        ) or (
+            args.use_exp_midi
+            and not Path(f"{args.midi_source_dir}/exp/{druid}_exp.mid").exists()
         ):
             copy(
                 Path(f"{args.midi_source_dir}/note/{druid}_note.mid"),
@@ -680,8 +691,9 @@ def main():
             metadata[key] = roll_data[key]
 
         if hole_data:
-            if metadata["type"] != "65-note":
-                hole_data = merge_midi_velocities(roll_data, hole_data, druid)
+            hole_data = merge_midi_velocities(
+                roll_data, hole_data, druid, metadata["type"]
+            )
             metadata["holeData"] = remap_hole_data(hole_data)
         else:
             metadata["holeData"] = None
