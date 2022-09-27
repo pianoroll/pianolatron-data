@@ -47,16 +47,16 @@ ROLL_TYPES = {
 
 PURL_BASE = "https://purl.stanford.edu/"
 STACKS_BASE = "https://stacks.stanford.edu/file/"
-NS = {"x": "http://www.loc.gov/mods/v3"}
+NS = {"atom": "http://www.w3.org/2005/Atom"}
 
 MIDI_DIR = "midi"
 TXT_DIR = "input/txt"
-IIIF_DIR = "input/manifests"
+NS = {"x": "http://www.loc.gov/mods/v3"}
 
 
-def get_metadata_for_druid(druid, redownload_mods):
-    """Obtains a .mods metadata file for the roll specified by DRUID either
-    from the local mods/ folder or the Stanford Digital Repository, then
+def get_metadata_for_druid(druid, redownload_xml):
+    """Obtains a .xml metadata file for the roll specified by DRUID either
+    from the local input/xml/ folder or the Stanford Digital Repository, then
     parses the XML to build the metadata dictionary for the roll.
     """
 
@@ -78,22 +78,26 @@ def get_metadata_for_druid(druid, redownload_mods):
                 return value
         return value
 
-    mods_filepath = Path(f"input/mods/{druid}.mods")
+    xml_filepath = Path(f"input/xml/{druid}.xml")
 
-    if not mods_filepath.exists() or redownload_mods:
-        response = requests.get(f"{PURL_BASE}{druid}.mods")
-        try:
-            xml_tree = etree.fromstring(response.content)
-        except etree.XMLSyntaxError:
-            logging.error(
-                f"Unable to parse MODS metadata for {druid} - record is likely missing."
-            )
-            return None
-
-        with mods_filepath.open("w") as _fh:
-            _fh.write(etree.tostring(xml_tree, encoding="unicode", pretty_print=True))
+    if not xml_filepath.exists() or redownload_xml:
+        response = requests.get(f"{PURL_BASE}{druid}.xml")
+        xml_data = response.text
+        with xml_filepath.open("w", encoding="utf-8") as _fh:
+            _fh.write(xml_data)
     else:
-        xml_tree = etree.parse(mods_filepath.open())
+        xml_data = xml_filepath.open("r", encoding="utf-8").read()
+
+    try:
+        mods_xml = (
+            "<mods" + xml_data.split(r"<mods")[1].split(r"</mods>")[0] + "</mods>"
+        )
+        xml_tree = etree.fromstring(mods_xml)
+    except etree.XMLSyntaxError:
+        logging.error(
+            f"Unable to parse XML metadata for {druid} - record is likely missing."
+        )
+        return None
 
     # The representation of the roll type in the MODS metadata continues to
     # evolve. Hopefully this logic covers all cases.
@@ -204,42 +208,18 @@ def get_metadata_for_druid(druid, redownload_mods):
         "PURL": PURL_BASE + druid,
     }
 
+    # Derive the value for the IIIF info.json file URL, which is eventually
+    # used to display the roll image in a viewer such as OpenSeadragon
+    image_id = re.search(
+        r"^.*?<label>(?:display image|jp2)<\/label>.*?<file id=\"([^\.]*)\.jp2",
+        xml_data,
+        re.MULTILINE | re.DOTALL,
+    ).group(1)
+    metadata[
+        "image_url"
+    ] = f"https://stacks.stanford.edu/image/iiif/{image_id.split('_')[0]}%2f{image_id}/info.json"
+
     return metadata
-
-
-def get_iiif_manifest(druid, redownload_manifests, iiif_source_dir):
-    """Obtains a .json IIIF manifest file for the roll specified by DRUID
-    from the local manifests/ folder or by downloading it from the Stanford
-    Digital Repository, then loads it into the iiif_manifest dictionary.
-    """
-
-    target_iiif_filepath = Path(f"input/manifests/{druid}.json")
-    source_iiif_filepath = Path(f"{iiif_source_dir}/{druid}.json")
-    if (
-        not target_iiif_filepath.exists()
-        or not source_iiif_filepath.exists()
-        or redownload_manifests
-    ):
-        response = requests.get(f"{PURL_BASE}{druid}/iiif/manifest")
-        iiif_manifest = response.json()
-        with target_iiif_filepath.open("w") as _fh:
-            json.dump(iiif_manifest, _fh)
-    elif source_iiif_filepath.exists():
-        iiif_manifest = json.load(open(source_iiif_filepath, "r"))
-    else:
-        iiif_manifest = json.load(open(target_iiif_filepath, "r"))
-    return iiif_manifest
-
-
-def get_iiif_image_url(iiif_manifest):
-    """Given a IIIF manifest dictionary, derives the value for the info.json
-    file URL, which can then be stored in the roll metadata and eventually
-    used to display the roll image in a viewer such as OpenSeadragon."""
-
-    resource_id = iiif_manifest["sequences"][0]["canvases"][0]["images"][0]["resource"][
-        "@id"
-    ]
-    return resource_id.replace("full/full/0/default.jpg", "info.json")
 
 
 def build_tempo_map_from_midi(druid):
@@ -589,14 +569,9 @@ def main():
         help="Do not generate a new catalog.json (preexisting file will remain)",
     )
     argparser.add_argument(
-        "--redownload-manifests",
+        "--redownload-xml",
         action="store_true",
-        help="Always download IIIF manifests, overwriting files in manifests/ and ignoring --iiif_source_dir",
-    )
-    argparser.add_argument(
-        "--redownload-mods",
-        action="store_true",
-        help="Always download MODS files, overwriting files in input/mods/",
+        help="Always download XML files, overwriting files in input/xml/",
     )
     argparser.add_argument(
         "--use-exp-midi",
@@ -612,11 +587,6 @@ def main():
         "--analysis-source-dir",
         default=TXT_DIR,
         help="Folder containg hole analysis output files (DRUID.txt)",
-    )
-    argparser.add_argument(
-        "--iiif-source-dir",
-        default=IIIF_DIR,
-        help="Folder containg pre-downloaded IIIF manifests (DRUID.json)",
     )
 
     args = argparser.parse_args()
@@ -644,19 +614,15 @@ def main():
     for druid in druids:
 
         if druid in ROLLS_TO_SKIP:
-            logging.info(f"Skippig DRUID {druid}")
+            logging.info(f"Skipping DRUID {druid}")
             continue
 
         logging.info(f"Processing {druid}...")
 
-        metadata = get_metadata_for_druid(druid, args.redownload_mods)
+        metadata = get_metadata_for_druid(druid, args.redownload_xml)
         if metadata is None:
             logging.info(f"Unable to get metadata for DRUID {druid}, skipping")
             continue
-
-        iiif_manifest = get_iiif_manifest(
-            druid, args.redownload_manifests, args.iiif_source_dir
-        )
 
         if (
             not args.use_exp_midi
@@ -705,7 +671,7 @@ def main():
                 {
                     "druid": druid,
                     "title": metadata["searchtitle"],
-                    "image_url": get_iiif_image_url(iiif_manifest),
+                    "image_url": metadata["image_url"],
                     "type": metadata["type"],
                     "number": metadata["number"],
                     "publisher": metadata["publisher"],
