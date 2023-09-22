@@ -211,7 +211,7 @@ def get_metadata_for_druid(druid, redownload_xml):
     # Derive the value for the IIIF info.json file URL, which is eventually
     # used to display the roll image in a viewer such as OpenSeadragon
     image_id = re.search(
-        r"^.*?<label>(?:display image|jp2)<\/label>.*?<file id=\"([^\.]*)\.jp2",
+        r"^.*?<label>(?:display image|jp2|Image 1)<\/label>.*?<file id=\"([^\.]*)\.jp2",
         xml_data,
         re.MULTILINE | re.DOTALL,
     ).group(1)
@@ -283,7 +283,6 @@ def merge_midi_velocities(roll_data, hole_data, druid, roll_type):
                         }
 
     for i, hole in enumerate(hole_data):
-
         hole_tick = int(hole["ORIGIN_ROW"]) - first_music_px
         hole_midi = int(hole["MIDI_KEY"])
 
@@ -351,7 +350,6 @@ def get_hole_report_data(druid, analysis_source_dir):
                 if key in hole_keys:
                     hole[key] = int(value.removesuffix("px"))
             if line == "@@END: HOLE\n":
-
                 if "NOTE_ATTACK" in hole:
                     assert "OFF_TIME" in hole
                     assert hole["NOTE_ATTACK"] == hole["ORIGIN_ROW"]
@@ -374,7 +372,6 @@ def remap_hole_data(hole_data):
     new_hole_data = []
 
     for hole in hole_data:
-
         new_hole = {
             "x": hole["ORIGIN_COL"],
             "y": hole["ORIGIN_ROW"],
@@ -490,8 +487,12 @@ def refine_metadata(metadata):
     searchtitle = None
 
     composer_short = ""
+    composer = ""
+    arranger = ""
+    performer = ""
     if metadata["composer"] is not None:
         composer_short = metadata["composer"].split(",")[0].strip()
+        composer = metadata["composer"]
 
     if metadata["original_composer"] is not None:
         original_composer_short = metadata["original_composer"].split(",")[0].strip()
@@ -500,6 +501,9 @@ def refine_metadata(metadata):
             and original_composer_short != composer_short
         ):
             searchtitle = f"{original_composer_short}-{composer_short}"
+            composer = metadata["original_composer"]
+            arranger = metadata["composer"]
+
     elif metadata["composer"] is not None:
         searchtitle = composer_short
 
@@ -509,6 +513,7 @@ def refine_metadata(metadata):
             searchtitle += f"-{arranger_short}"
         else:
             searchtitle = arranger_short
+        arranger = metadata["arranger"]
 
     if metadata["performer"] is not None:
         performer_short = metadata["performer"].split(",")[0].strip()
@@ -516,6 +521,7 @@ def refine_metadata(metadata):
             searchtitle += "/" + performer_short
         else:
             searchtitle = performer_short
+        performer = metadata["performer"]
 
     if searchtitle is not None:
         searchtitle += " - " + fulltitle
@@ -523,6 +529,13 @@ def refine_metadata(metadata):
         searchtitle = fulltitle
 
     metadata["searchtitle"] = searchtitle.replace(" : ", ": ").replace(" ; ", "; ")
+
+    metadata["for_catalog"] = {
+        "composer": composer,
+        "arranger": arranger,
+        "performer": performer,
+        "work": fulltitle,
+    }
 
     return metadata
 
@@ -612,7 +625,6 @@ def main():
     catalog_entries = []
 
     for druid in druids:
-
         if druid in ROLLS_TO_SKIP:
             logging.info(f"Skipping DRUID {druid}")
             continue
@@ -671,6 +683,10 @@ def main():
                 {
                     "druid": druid,
                     "title": metadata["searchtitle"],
+                    "composer": metadata["for_catalog"]["composer"],
+                    "performer": metadata["for_catalog"]["performer"],
+                    "arranger": metadata["for_catalog"]["arranger"],
+                    "work": metadata["for_catalog"]["work"],
                     "image_url": metadata["image_url"],
                     "type": metadata["type"],
                     "number": metadata["number"],
