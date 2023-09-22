@@ -217,7 +217,7 @@ def get_metadata_for_druid(druid, redownload_xml):
     ).group(1)
     metadata[
         "image_url"
-    ] = f"https://stacks.stanford.edu/image/iiif/{image_id.split('_')[0]}%2f{image_id}/info.json"
+    ] = f"https://stacks.stanford.edu/image/iiif/{image_id.split('_')[0]}/{image_id}/info.json"
 
     return metadata
 
