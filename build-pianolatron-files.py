@@ -31,6 +31,7 @@ ROLL_TYPES = {
     "Welte-Mignon red roll (T-100)": "welte-red",
     "Welte-Mignon red roll (T-100).": "welte-red",
     "Welte-Mignon red roll (T-100)..": "welte-red",
+    "Scale: 88n": "88-note",
     "Scale: 88n.": "88-note",
     "Scale: 65n.": "65-note",
     "88n": "88-note",
@@ -120,7 +121,13 @@ def get_metadata_for_druid(druid, redownload_xml):
 
     if roll_type == "NA" or type_note == "standard":
         for note in xml_tree.xpath("(x:note)", namespaces=NS):
-            if note is not None and note.text in ROLL_TYPES:
+            if (
+                note is not None
+                and note.text in ROLL_TYPES
+                # Most rolls of any type are marked as "88n", so don't let this
+                # setting overwrite a more specific roll type note.
+                and (ROLL_TYPES[note.text] != "88-note" or roll_type == "NA")
+            ):
                 roll_type = ROLL_TYPES[note.text]
 
     metadata = {
@@ -211,13 +218,13 @@ def get_metadata_for_druid(druid, redownload_xml):
     # Derive the value for the IIIF info.json file URL, which is eventually
     # used to display the roll image in a viewer such as OpenSeadragon
     image_id = re.search(
-        r"^.*?<label>(?:display image|jp2|Image 1)<\/label>.*?<file id=\"([^\.]*)\.jp2",
+        r"^.*?<label>(?:display image|jp2|[Ii]mage 1)<\/label>.*?<file id=\"([^\.]*)\.jp2",
         xml_data,
         re.MULTILINE | re.DOTALL,
     ).group(1)
-    metadata[
-        "image_url"
-    ] = f"https://stacks.stanford.edu/image/iiif/{image_id.split('_')[0]}/{image_id}/info.json"
+    metadata["image_url"] = (
+        f"https://stacks.stanford.edu/image/iiif/{image_id.split('_')[0]}/{image_id}/info.json"
+    )
 
     return metadata
 
@@ -249,7 +256,7 @@ def merge_midi_velocities(roll_data, hole_data, druid, roll_type):
     output file for use when highlighting the note holes in the roll when it is
     displayed in the Pianolatron app."""
 
-    midi_filepath = Path(f"output/midi/{druid}.mid")
+    midi_filepath = Path(f"output/midi/exp/{druid}.mid")
 
     if not midi_filepath.exists():
         logging.info(
@@ -342,7 +349,17 @@ def get_hole_report_data(druid, analysis_source_dir):
                 if key in roll_keys:
                     roll_data[key] = value.replace("px", "").strip()
 
-        while (line := _fh.readline()) and line != "@@END: HOLES\n":
+        # Out-of-spec holes are marked as "BAD" in a special section of the
+        # @ATON .txt hole data file, but are still interpreted as control or
+        # note holes when generating the MIDI file for the roll. So it seems
+        # best to include their data in the output JSON file so that they'll be
+        # highlighted properly in the player.
+        # NOTE that this parsing procedure assumes the BADHOLES section always
+        # follows the end of the HOLES section, and that the hole data file
+        # always has a BADHOLES section even when no bad holes have been
+        # detected on the roll.
+
+        while (line := _fh.readline()) and line != "@@END: BADHOLES\n":
             if line == "@@BEGIN: HOLE\n":
                 hole = {}
             if match := re.match(r"^@([^@\s]+):\s+(.*)", line):
@@ -355,8 +372,10 @@ def get_hole_report_data(druid, analysis_source_dir):
                     assert hole["NOTE_ATTACK"] == hole["ORIGIN_ROW"]
                     del hole["NOTE_ATTACK"]
                     if hole["ORIGIN_ROW"] >= hole["OFF_TIME"]:
-                        logging.info(f"WARNING: invalid note duration: {hole}")
-                    hole_data.append(hole)
+                        # logging.info(f"WARNING: invalid note duration: {hole}")
+                        dropped_holes += 1
+                    else:
+                        hole_data.append(hole)
                 else:
                     assert "OFF_TIME" not in hole
                     dropped_holes += 1
@@ -587,14 +606,9 @@ def main():
         help="Always download XML files, overwriting files in input/xml/",
     )
     argparser.add_argument(
-        "--use-exp-midi",
-        action="store_true",
-        help="Use expressionized MIDI for output .mid files (default is to use note MIDI)",
-    )
-    argparser.add_argument(
         "--midi-source-dir",
         default=MIDI_DIR,
-        help="Folder containg note (DIR/note/DRUID_note.mid) or expressionized (DIR/exp/DRUID_exp.mid) MIDI files",
+        help="Folder containg note (DIR/note/DRUID_note.mid) and expression (DIR/exp/DRUID_exp.mid) MIDI files",
     )
     argparser.add_argument(
         "--analysis-source-dir",
@@ -636,24 +650,17 @@ def main():
             logging.info(f"Unable to get metadata for DRUID {druid}, skipping")
             continue
 
-        if (
-            not args.use_exp_midi
-            and Path(f"{args.midi_source_dir}/note/{druid}_note.mid").exists()
-        ) or (
-            args.use_exp_midi
-            and not Path(f"{args.midi_source_dir}/exp/{druid}_exp.mid").exists()
-        ):
-            copy(
-                Path(f"{args.midi_source_dir}/note/{druid}_note.mid"),
-                Path(f"output/midi/{druid}.mid"),
-            )
-            note_midi = MidiFile(Path(f"output/midi/{druid}.mid"))
-            metadata["NOTE_MIDI_TPQ"] = note_midi.ticks_per_beat
-        elif Path(f"{args.midi_source_dir}/exp/{druid}_exp.mid").exists():
-            copy(
-                Path(f"{args.midi_source_dir}/exp/{druid}_exp.mid"),
-                Path(f"output/midi/{druid}.mid"),
-            )
+        copy(
+            Path(f"{args.midi_source_dir}/note/{druid}_note.mid"),
+            Path(f"output/midi/note/{druid}.mid"),
+        )
+        note_midi = MidiFile(Path(f"output/midi/note/{druid}.mid"))
+        metadata["NOTE_MIDI_TPQ"] = note_midi.ticks_per_beat
+
+        copy(
+            Path(f"{args.midi_source_dir}/exp/{druid}_exp.mid"),
+            Path(f"output/midi/exp/{druid}.mid"),
+        )
 
         if WRITE_TEMPO_MAPS:
             metadata["tempoMap"] = build_tempo_map_from_midi(druid)
