@@ -2,14 +2,14 @@ name: update-data
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
   workflow_dispatch:
-  
+
   #schedule:
-  #  - cron: "0 0 1 * *" # Runs at 00:00 UTC on the first of every month 
+  #  - cron: "0 0 1 * *" # Runs at 00:00 UTC on the first of every month
 
 jobs:
   build:
@@ -23,33 +23,33 @@ jobs:
         uses: actions/setup-python@v3
         with:
           python-version: 3.9
-        
+
       - name: install pipenv
         run: |
           pip install --user pipenv
           USER_BASE=`python -m site --user-base`
           export PATH=$USER_BASE/bin:$PATH
-        
+
       - name: install Python dependencies
         run: pipenv install
-      
+
       - name: clone roll-wrangler repo
         run: |
           git clone https://github.com/pianoroll/roll-wrangler.git
-        
+
       - name: move roll-wrangler files to expected locations
         run: |
           mv ./roll-wrangler/midi/note/*.mid midi/note/.
           mv ./roll-wrangler/midi/exp/*.mid midi/exp/.
           mv ./roll-wrangler/txt/*.txt input/txt/.
-        
+
       - name: run the data generation script
         run: pipenv run python build-pianolatron-files.py
-        
+
       - name: commit the new/updated output files to the repo
         uses: EndBug/add-and-commit@v9.0.0
         with:
-          add: '["output/json/*.json","output/midi/*.mid","midi/exp/*.mid","midi/note/*.mid","output/catalog.json"]'
-          message: 'Automatic update'
+          add: '["output/json/*.json","output/midi/exp/*.mod","output/midi/note/*.mid","midi/exp/*.mid","midi/note/*.mid","output/catalog.json"]'
+          message: "Automatic update"
           author_name: GitHub Actions
           author_email: actions@github.com
