@@ -650,6 +650,10 @@ def main():
             logging.info(f"Unable to get metadata for DRUID {druid}, skipping")
             continue
 
+        metadata = refine_metadata(metadata)
+
+        logging.info(f"Roll type is {metadata['type']}...")
+
         copy(
             Path(f"{args.midi_source_dir}/note/{druid}_note.mid"),
             Path(f"output/midi/note/{druid}.mid"),
@@ -657,19 +661,21 @@ def main():
         note_midi = MidiFile(Path(f"output/midi/note/{druid}.mid"))
         metadata["NOTE_MIDI_TPQ"] = note_midi.ticks_per_beat
 
-        copy(
-            Path(f"{args.midi_source_dir}/exp/{druid}_exp.mid"),
-            Path(f"output/midi/exp/{druid}.mid"),
-        )
+        if metadata["type"] == "65-note":
+            copy(
+                Path(f"{args.midi_source_dir}/exp/{druid}_note.mid"),
+                Path(f"output/midi/exp/{druid}.mid"),
+            )
+        else:
+            copy(
+                Path(f"{args.midi_source_dir}/exp/{druid}_exp.mid"),
+                Path(f"output/midi/exp/{druid}.mid"),
+            )
 
         if WRITE_TEMPO_MAPS:
             metadata["tempoMap"] = build_tempo_map_from_midi(druid)
 
         roll_data, hole_data = get_hole_report_data(druid, args.analysis_source_dir)
-
-        metadata = refine_metadata(metadata)
-
-        logging.info(f"Roll type is {metadata['type']}...")
 
         # Add roll-level hole report info to the metadata
         for key in roll_data:
