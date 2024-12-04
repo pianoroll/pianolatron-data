@@ -42,13 +42,13 @@ ROLL_TYPES = {
     "Welte-Mignon green roll (T-98).": "welte-green",
     "Welte-Mignon licensee roll": "welte-licensee",
     "Welte-Mignon licensee roll.": "welte-licensee",
+    "Welte-Mignon licensee roll (T-98).": "welte-licensee",
     "Duo-Art piano rolls": "duo-art",
     "Duo-Art piano rolls.": "duo-art",
 }
 
 PURL_BASE = "https://purl.stanford.edu/"
 STACKS_BASE = "https://stacks.stanford.edu/file/"
-NS = {"atom": "http://www.w3.org/2005/Atom"}
 
 MIDI_DIR = "midi"
 TXT_DIR = "input/txt"
