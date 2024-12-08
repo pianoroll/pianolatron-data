@@ -218,7 +218,7 @@ def get_metadata_for_druid(druid, redownload_xml):
     # Derive the value for the IIIF info.json file URL, which is eventually
     # used to display the roll image in a viewer such as OpenSeadragon
     image_id = re.search(
-        r"^.*?<label>(?:display image|jp2|[Ii]mage 1)<\/label>.*?<file id=\"([^\.]*)\.jp2",
+        r"^.*?<label>(?:display image|jp2|[Ii]mage \d)<\/label>.*?<file id=\"([^\.]*)\.jp2",
         xml_data,
         re.MULTILINE | re.DOTALL,
     ).group(1)
