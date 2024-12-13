@@ -354,12 +354,16 @@ def get_hole_report_data(druid, analysis_source_dir):
         # note holes when generating the MIDI file for the roll. So it seems
         # best to include their data in the output JSON file so that they'll be
         # highlighted properly in the player.
-        # NOTE that this parsing procedure assumes the BADHOLES section always
-        # follows the end of the HOLES section, and that the hole data file
-        # always has a BADHOLES section even when no bad holes have been
-        # detected on the roll.
+        # The .txt hole data file also can contain a TEARS section that follows
+        # the BADHOLES section, so we need to check for the start of the TEARS
+        # section and stop parsing there to handle the case that a .txt file
+        # has a TEARS section after the NOTES section but no BADHOLES section.
 
-        while (line := _fh.readline()) and line != "@@END: BADHOLES\n":
+        while (
+            (line := _fh.readline())
+            and line != "@@END: BADHOLES\n"
+            and line != "@@BEGIN: TEARS"
+        ):
             if line == "@@BEGIN: HOLE\n":
                 hole = {}
             if match := re.match(r"^@([^@\s]+):\s+(.*)", line):
@@ -380,7 +384,7 @@ def get_hole_report_data(druid, analysis_source_dir):
                     assert "OFF_TIME" not in hole
                     dropped_holes += 1
 
-    logging.info(f"Dropped Holes: {dropped_holes}")
+    # logging.info(f"Dropped Holes: {dropped_holes}")
     return roll_data, hole_data
 
 
@@ -463,6 +467,198 @@ def get_druids_from_txt_files():
     for druid_file in Path("input/druids/").glob("*.txt"):
         druids_list.extend(get_druids_from_txt_file(druid_file))
     return druids_list
+
+
+def check_midi_profile(roll_data, roll_type, hole_data):
+    column_hole_counts = {}
+    # All currently supported roll types only use MIDI values between
+    # 14 and 114.
+    for i in range(10, 119):
+        column_hole_counts[i] = 0
+
+    last_hole_midi = 0
+    last_hole_tick = 0
+    last_hole_duration = 0
+
+    first_music_px = int(roll_data["FIRST_HOLE"].removesuffix("px"))
+
+    for hole in hole_data:
+        hole_midi = int(hole["MIDI_KEY"])
+        hole_tick = int(hole["ORIGIN_ROW"]) - first_music_px
+        # Just skip these for now; they should only happen in weird cases like with 65-note rolls
+        if hole_midi == -1:
+            continue
+        column_hole_counts[hole_midi] += 1
+        if hole_tick > last_hole_tick:
+            last_hole_midi = hole_midi
+            last_hole_tick = hole_tick
+            last_hole_duration = hole["OFF_TIME"] - hole["ORIGIN_ROW"]
+
+    total_holes = len(hole_data)
+
+    sus_midi = []
+    sus_suffix = ""
+    rewind_found = False
+
+    # XXX When considering candidate rewind holes, consider determining its duration
+    # by subtracting the NOTE_ATTACK (identical to ORIGIN_ROW) from the OFF_TIME
+    # Minimum Red Welte rewind hole duration is > 600px
+
+    if roll_type == "welte-red":
+        # Left control: 14-23 (22 and 23 are questionable because many rolls do use the motor (fan) on/off switch)
+        # C1: 24, C#1: 25, G7: 103
+        # 104: rewind, 106: electric cutoff (rarely used). Right control ends at 113
+        sus_midi = [10, 11, 12, 13, 24, 25, 103, 104, 105, 106, 114, 115, 116, 117, 118]
+        if not (
+            last_hole_midi == 104 or last_hole_midi == 14
+        ):  # 113 is also pretty common
+            logging.info(
+                f"Roll type is Red Welte, but last hole MIDI is not the expected rewind hole: {last_hole_midi}",
+            )
+            sus_suffix += "!"
+        else:
+            rewind_found = True
+
+    elif roll_type == "welte-green":
+        # Left control: 16-20, A0: 21, A#0: 22, A#7: 106, B7: 107, C8: 108, Right control: 109-113
+        sus_midi = [
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            21,
+            22,
+            23,
+            106,
+            107,
+            108,
+            114,
+            115,
+            116,
+            117,
+            118,
+        ]
+        if last_hole_midi != 16:
+            logging.info(
+                f"Roll type is Green Welte, but last hole MIDI is not the expected rewind hole: {last_hole_midi}",
+            )
+            sus_suffix += "!"
+        else:
+            rewind_found = True
+
+    elif roll_type == "welte-licensee":
+        # Left control: 16-23, C1: 24, C#1: 25, F#7: 102, G7: 103, Rewind: 104, Blank: 105, Right control: 106-113
+        sus_midi = [
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            24,
+            25,
+            102,
+            103,
+            104,
+            105,
+            114,
+            115,
+            116,
+            117,
+            118,
+        ]
+        if last_hole_midi != 104:
+            logging.info(
+                f"Roll type is Licensee, but last hole MIDI is not the expected rewind hole: {last_hole_midi}",
+            )
+            sus_suffix += "!"
+        else:
+            rewind_found = True
+
+    elif roll_type == "88-note":
+        # Unused controls: 15-17, except 16 is sometimes the rewind hole
+        # A0: 21, A#0: 22, B6: 107, C7: 108
+        # Unused controls: 111-114
+        sus_midi = [
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            21,
+            22,
+            107,
+            108,
+            111,
+            112,
+            113,
+            114,
+            115,
+            116,
+            117,
+            118,
+        ]
+
+    elif roll_type == "duo-art":
+        # Rewind (wide hole): 16, Empty (overlaps with rewind): 17, Left controls: 18-24
+        # C#1: 25, D1: 26, G7: 103, G#7: 104
+        # Right control: 105-110, 111-112 blank, 113 is sustain pedal
+        sus_midi = [
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            25,
+            26,
+            103,
+            104,
+            111,
+            112,
+            114,
+            115,
+            116,
+            117,
+            118,
+        ]
+        if last_hole_midi != 16:
+            logging.info(
+                f"Roll type is Duo-Art, but last hole MIDI is not the expected rewind hole: {last_hole_midi}",
+            )
+            sus_suffix += "!"
+        else:
+            rewind_found = True
+
+    else:
+        # 65-note not worth checking, ampico not supported yet
+        return
+
+    total_sus_holes = 0
+    for midi in sus_midi:
+        total_sus_holes += column_hole_counts[midi]
+
+    sus_ratio = total_sus_holes / total_holes
+
+    if sus_ratio > 0.01:
+        sus_suffix += "!"
+    if sus_ratio > 0.05:
+        sus_suffix += "!"
+
+    rewind_message = ""
+    if rewind_found:
+        rewind_message = "(at rewind hole location)"
+
+    logging.info(f"Final hole duration: {last_hole_duration} {rewind_message}")
+
+    logging.info(
+        f"Total holes: {total_holes}, total sus holes: {total_sus_holes}, ratio: {sus_ratio:.3f} {sus_suffix}"
+    )
 
 
 def refine_metadata(metadata):
@@ -643,8 +839,6 @@ def main():
             logging.info(f"Skipping DRUID {druid}")
             continue
 
-        logging.info(f"Processing {druid}...")
-
         metadata = get_metadata_for_druid(druid, args.redownload_xml)
         if metadata is None:
             logging.info(f"Unable to get metadata for DRUID {druid}, skipping")
@@ -652,7 +846,7 @@ def main():
 
         metadata = refine_metadata(metadata)
 
-        logging.info(f"Roll type is {metadata['type']}...")
+        logging.info(f"Processing {druid}, roll type is {metadata['type']}...")
 
         copy(
             Path(f"{args.midi_source_dir}/note/{druid}_note.mid"),
@@ -685,6 +879,11 @@ def main():
             hole_data = merge_midi_velocities(
                 roll_data, hole_data, druid, metadata["type"]
             )
+
+            # Check to see whether the parser output has a lot of holes in
+            # columns where there shouldn't be holes; raise a warning if so
+            check_midi_profile(roll_data, metadata["type"], hole_data)
+
             metadata["holeData"] = remap_hole_data(hole_data)
         else:
             metadata["holeData"] = None
