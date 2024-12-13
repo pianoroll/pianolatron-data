@@ -502,7 +502,7 @@ def check_midi_profile(roll_data, roll_type, hole_data):
 
     # XXX When considering candidate rewind holes, consider determining its duration
     # by subtracting the NOTE_ATTACK (identical to ORIGIN_ROW) from the OFF_TIME
-    # Minimum Red Welte rewind hole duration is > 600px
+    # Minimum Red Welte rewind hole duration can be as low as 390 (px)
 
     if roll_type == "welte-red":
         # Left control: 14-23 (22 and 23 are questionable because many rolls do use the motor (fan) on/off switch)
