@@ -25,7 +25,20 @@ WRITE_TEMPO_MAPS = False
 # These are either duplicates of existing rolls, or rolls that are listed in
 # the DRUIDs files but have since disappeared from the library catalog,
 # or rolls that were accessioned incorrectly (hm136vg1420)
-ROLLS_TO_SKIP = ["rr052wh1991", "hm136vg1420"]
+# Note: All Duo-Art rolls are currently unusable because their primary images
+# are upside-down on the server.
+ROLLS_TO_SKIP = [
+    "rr052wh1991",  # Duplicate of gn803sk7089
+    "hm136vg1420",  # Incorrectly mirrored, but replaced by rg676ym0376 - should be de-accessioned
+    "df354sy6634",  # Needs to be flipped vertically
+    "xc735nd8093",  # Needs to be flipped vertically
+    "sh954gz9635",  # Large section of white paper from repair makes it unparsable
+    "wb477ky1555",  # Green W incorrectly cataloged as Red
+    "pz737tz3677",  # Licensee incorrectly cataloged as Green
+    "yj176wj3359",  # Licensee incorrectly cataloged as Green
+    "sm367hr9769",  # Image(s) seem to be corrupted
+    "sj617nc3041",  # All images erroneously mirrored left-right
+]
 
 ROLL_TYPES = {
     "Welte-Mignon red roll (T-100)": "welte-red",
@@ -350,22 +363,30 @@ def get_hole_report_data(druid, analysis_source_dir):
                     roll_data[key] = value.replace("px", "").strip()
 
         # Out-of-spec holes are marked as "BAD" in a special section of the
-        # @ATON .txt hole data file, but are still interpreted as control or
-        # note holes when generating the MIDI file for the roll. So it seems
-        # best to include their data in the output JSON file so that they'll be
-        # highlighted properly in the player.
+        # @ATON .txt hole data file following the NOTES section, but are still
+        # interpreted as note holes (and possibly as control holes ?) when
+        # generating the MIDI file for the roll. So it seems best to include
+        # their data in the output JSON file so that they'll be highlighted
+        # properly in the player.
         # The .txt hole data file also can contain a TEARS section that follows
         # the BADHOLES section, so we need to check for the start of the TEARS
-        # section and stop parsing there to handle the case that a .txt file
+        # section and stop parsing there, to handle the case that a .txt file
         # has a TEARS section after the NOTES section but no BADHOLES section.
+
+        in_badholes = False
 
         while (
             (line := _fh.readline())
             and line != "@@END: BADHOLES\n"
-            and line != "@@BEGIN: TEARS"
+            and line != "@@BEGIN: TEARS\n"
         ):
+            if line == "@@BEGIN: BADHOLES\n":
+                in_badholes = True
+
             if line == "@@BEGIN: HOLE\n":
                 hole = {}
+            if in_badholes:
+                hole["CATEGORY"] = "bad"
             if match := re.match(r"^@([^@\s]+):\s+(.*)", line):
                 key, value = match.groups()
                 if key in hole_keys:
@@ -405,6 +426,8 @@ def remap_hole_data(hole_data):
         }
         if "VELOCITY" in hole:
             new_hole["v"] = hole["VELOCITY"]
+        if "CATEGORY" in hole:
+            new_hole["c"] = hole["CATEGORY"]
 
         new_hole_data.append(new_hole)
 
@@ -521,6 +544,8 @@ def check_midi_profile(roll_data, roll_type, hole_data):
 
     elif roll_type == "welte-green":
         # Left control: 16-20, A0: 21, A#0: 22, A#7: 106, B7: 107, C8: 108, Right control: 109-113
+        # Green Welte rewind (16, shared with sfzp) holes tend to be longer.
+        # Also sometimes there's a long C8 (108) after the rewind...
         sus_midi = [
             10,
             11,
