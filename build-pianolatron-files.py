@@ -9,16 +9,16 @@ the app.
 """
 
 import argparse
-from csv import DictReader
 import json
 import logging
-from pathlib import Path
 import re
+from csv import DictReader
+from pathlib import Path
 from shutil import copy
 
+import requests
 from lxml import etree
 from mido import MidiFile, tempo2bpm
-import requests
 
 WRITE_TEMPO_MAPS = False
 
@@ -33,11 +33,10 @@ ROLLS_TO_SKIP = [
     "df354sy6634",  # Needs to be flipped vertically
     "xc735nd8093",  # Needs to be flipped vertically
     "sh954gz9635",  # Large section of white paper from repair makes it unparsable
-    "wb477ky1555",  # Green W incorrectly cataloged as Red
-    "pz737tz3677",  # Licensee incorrectly cataloged as Green
-    "yj176wj3359",  # Licensee incorrectly cataloged as Green
+    "wb477ky1555",  # Green W (T-98) incorrectly cataloged as Red (T-100)
+    "pz737tz3677",  # Licensee incorrectly cataloged as Green (T-98)
+    "yj176wj3359",  # Licensee incorrectly cataloged as Green (T-98)
     "sm367hr9769",  # Image(s) seem to be corrupted
-    "sj617nc3041",  # All images erroneously mirrored left-right
 ]
 
 ROLL_TYPES = {
