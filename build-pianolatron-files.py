@@ -101,6 +101,25 @@ def get_metadata_for_druid(druid, redownload_xml):
     else:
         xml_data = xml_filepath.open("r", encoding="utf-8").read()
 
+    catkey = None
+    # Manually parse out the catkey from the identityMetadata section, which
+    # doesn't have an associated xmlns, making it difficult to parse with lxml
+    identity_xml = xml_data.split(r"<identityMetadata")[1].split(
+        r"</identityMetadata>"
+    )[0]
+    if identity_xml.find("catkey") != -1:
+        catkey = identity_xml.split(r'<otherId name="catkey">')[1].split(r"</otherId>")[
+            0
+        ]
+    elif identity_xml.find("folio_instance_hrid") != -1:
+        catkey = (
+            identity_xml.split(r'<otherId name="folio_instance_hrid">')[1]
+            .split(r"</otherId>")[0]
+            .replace("a", "")
+        )
+    else:
+        logging.error(f"Unable to find catkey for {druid}")
+
     try:
         mods_xml = (
             "<mods" + xml_data.split(r"<mods")[1].split(r"</mods>")[0] + "</mods>"
@@ -225,6 +244,7 @@ def get_metadata_for_druid(druid, redownload_xml):
         # "call_number": get_value_by_xpath("x:location/x:shelfLocator/text()"),
         "type": roll_type,
         "PURL": PURL_BASE + druid,
+        "catkey": catkey,
     }
 
     # Derive the value for the IIIF info.json file URL, which is eventually
@@ -858,7 +878,13 @@ def main():
 
     catalog_entries = []
 
+    druids_processed = set()
+
     for druid in druids:
+        if druid in druids_processed:
+            logging.info(f"Duplicate DRUID, skipping: {druid}")
+            continue
+
         if druid in ROLLS_TO_SKIP:
             logging.info(f"Skipping DRUID {druid}")
             continue
@@ -914,10 +940,13 @@ def main():
 
         write_json(druid, metadata)
 
+        druids_processed.add(druid)
+
         if not args.no_catalog:
             catalog_entries.append(
                 {
                     "druid": druid,
+                    "catkey": metadata["catkey"],
                     "title": metadata["searchtitle"],
                     "composer": metadata["for_catalog"]["composer"],
                     "performer": metadata["for_catalog"]["performer"],
