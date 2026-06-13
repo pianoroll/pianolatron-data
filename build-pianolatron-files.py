@@ -138,7 +138,7 @@ def get_metadata_for_druid(druid, redownload_xml):
         "x:physicalDescription/x:note[@displayLabel='Roll type']/text()"
     )
     scale_note = get_value_by_xpath(
-        "x:physicalDescription/x:note[@displayLabel='Scale']/text()"
+        "x:physicalDescription/x:note[@displayLabel='Scale']/text()",
     )
     if type_note is not None and type_note in ROLL_TYPES:
         roll_type = ROLL_TYPES[type_note]
@@ -163,16 +163,16 @@ def get_metadata_for_druid(druid, redownload_xml):
 
     metadata = {
         "title_prefix": get_value_by_xpath(
-            "(x:titleInfo[@usage='primary']/x:nonSort)[1]/text()"
+            "(x:titleInfo[@usage='primary' or not(@usage)]/x:nonSort)[1]/text()"
         ),
         "title": get_value_by_xpath(
-            "(x:titleInfo[@usage='primary']/x:title)[1]/text()"
+            "(x:titleInfo[@usage='primary' or not(@usage)]/x:title)[1]/text()"
         ),
         "title_part_number": get_value_by_xpath(
-            "(x:titleInfo[@usage='primary']/x:partNumber)[1]/text()"
+            "(x:titleInfo[@usage='primary or not(@usage)']/x:partNumber)[1]/text()"
         ),
         "title_part_name": get_value_by_xpath(
-            "(x:titleInfo[@usage='primary']/x:partName)[1]/text()"
+            "(x:titleInfo[@usage='primary or not(@usage)']/x:partName)[1]/text()"
         ),
         "subtitle": get_value_by_xpath("(x:titleInfo/x:subTitle)[1]/text()"),
         "composer": get_value_by_xpaths(
@@ -185,6 +185,7 @@ def get_metadata_for_druid(druid, redownload_xml):
         ),
         "performer": get_value_by_xpaths(
             [
+                "x:note[@type='performers']/text()",
                 "x:name[descendant::x:roleTerm[text()='instrumentalist']]/x:namePart[not(@type='date')]/text()",
                 "x:name[descendant::x:roleTerm[text()='instrumentalist.']]/x:namePart[not(@type='date')]/text()",
             ]
@@ -249,11 +250,27 @@ def get_metadata_for_druid(druid, redownload_xml):
 
     # Derive the value for the IIIF info.json file URL, which is eventually
     # used to display the roll image in a viewer such as OpenSeadragon
-    image_id = re.search(
+    image_id_match = re.search(
         r"^.*?<label>(?:display image|jp2|[Ii]mage \d)<\/label>.*?<file id=\"([^\.]*)\.jp2",
         xml_data,
         re.MULTILINE | re.DOTALL,
-    ).group(1)
+    )
+    if image_id_match is not None:
+        image_id = image_id_match.group(1)
+    else:
+        # For gen2 it's https://stacks.stanford.edu/image/iiif/hd490vp4338/hd490vp4338_0001_Color/info.json
+        # The relevant line in the Cocina XML is
+        # <file id="hd490vp4338_0001_Color.jp2" mimetype="image/jp2" size="496405974" publish="yes" shelve="yes" preserve="no">
+        image_id_match = re.search(
+            r"<file id=\"(.*?_Color)\.jp2",
+            xml_data,
+            re.MULTILINE | re.DOTALL,
+        )
+        if image_id_match is None:
+            logging.error(f"Unable to find image URL for {druid}.")
+            return None
+        image_id = image_id_match.group(1)
+
     metadata["image_url"] = (
         f"https://stacks.stanford.edu/image/iiif/{image_id.split('_')[0]}/{image_id}/info.json"
     )
