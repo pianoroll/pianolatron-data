@@ -979,7 +979,7 @@ def main():
         else:
             metadata["holeData"] = None
 
-        if metadata["holeData"] and args.spell_pitches:
+        if metadata["holeData"] is not None and args.spell_pitches is True:
             p_list = []
             d_list = []
             for hole in metadata["holeData"]:
