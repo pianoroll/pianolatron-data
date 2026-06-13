@@ -872,6 +872,11 @@ def main():
         default=TXT_DIR,
         help="Folder containg hole analysis output files (DRUID.txt)",
     )
+    argparser.add_argument(
+        "--spell-pitches",
+        action="store_true",
+        help="Estimate correct enharmonic pitch names and include in output (requires PyTorch)",
+    )
 
     args = argparser.parse_args()
 
@@ -896,6 +901,25 @@ def main():
     catalog_entries = []
 
     druids_processed = set()
+
+    if args.spell_pitches:
+        import sys
+
+        import torch
+
+        current_dir = Path(__file__).resolve().parent
+        target_dir = current_dir / "pkspell"
+        sys.path.append(str(target_dir))
+
+        from models.inference import single_piece_predict
+        from models.models import PKSpell
+
+        device = (
+            torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        )
+
+        model = PKSpell()
+        model.load_state_dict(torch.load(Path("pkspell/pkspell_statedict.pt")))
 
     for druid in druids:
         if druid in druids_processed:
@@ -954,6 +978,29 @@ def main():
             metadata["holeData"] = remap_hole_data(hole_data)
         else:
             metadata["holeData"] = None
+
+        if metadata["holeData"] and args.spell_pitches:
+            p_list = []
+            d_list = []
+            for hole in metadata["holeData"]:
+                if hole["m"] < 21 or hole["m"] > 108:
+                    continue
+                p_list.append(int(hole["m"]) % 12)
+                d_list.append(int(hole["h"]))
+
+            logging.info(f"Calculating enharmonic spellings for {len(p_list)} notes")
+
+            spellings, key_signatures = single_piece_predict(
+                p_list, d_list, model, device
+            )
+
+            spelling_index = 0
+            for h, hole in enumerate(metadata["holeData"]):
+                if hole["m"] < 21 or hole["m"] > 108:
+                    continue
+
+                metadata["holeData"][h]["s"] = spellings[spelling_index]
+                spelling_index += 1
 
         write_json(druid, metadata)
 
