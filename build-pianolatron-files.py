@@ -999,7 +999,11 @@ def main():
                 if hole["m"] < 21 or hole["m"] > 108:
                     continue
 
-                metadata["holeData"][h]["s"] = spellings[spelling_index]
+                # Don't write spelling for naturals - the MIDI number is enough
+                if spellings[spelling_index].endswith("-") or spellings[
+                    spelling_index
+                ].endswith("+"):
+                    metadata["holeData"][h]["s"] = spellings[spelling_index]
                 spelling_index += 1
 
         write_json(druid, metadata)
