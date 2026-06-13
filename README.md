@@ -21,7 +21,7 @@ After creating a local copy of the repository
 
 `git clone https://github.com/pianoroll/pianolatron-data.git`
 
-the easiest way to ensure the scripts can be run is to make sure Pipenv is installed on your system. Then run
+the easiest way to ensure the scripts can be run is to make sure [Pipenv](https://pypi.org/project/pipenv/) is installed on your system. Then run
 
 `pipenv install`
 
@@ -31,11 +31,11 @@ from within the pianolatron-data/ folder to set up a Python environment and inst
 
 Before running the `build-pianolatron-files.py` script, the necessary input files produced via the [roll-wrangler](https://github.com/pianoroll/roll-wrangler) tool must be made available for all rolls to be included in the Pianolatron data.
 
-By default, the script will look for the input note and expression MIDI files in `midi/note/` and `midi/exp/`, respectively, and the .txt output files from `roll-wrangler`'s `process-roll-images.py` are expected to be in `input/txt/`.
+By default, the script will look for the input note and expression MIDI files in [midi/note/](https://github.com/pianoroll/pianolatron-data/tree/main/midi/note) and [midi/exp/](https://github.com/pianoroll/pianolatron-data/tree/main/midi/exp), respectively, and the .txt output files from `roll-wrangler`'s `process-roll-images.py` are expected to be in [input/txt/](https://github.com/pianoroll/pianolatron-data/tree/main/input/txt).
 
-The .xml metadata files from the processing also can be placed in `input/xml/`, but the script will download them if they are not available.
+The .xml metadata files from the processing also can be placed in [input/xml/](https://github.com/pianoroll/pianolatron-data/tree/main/input/xml), but the script will download them if they are not available.
 
-Finally, text or comma-separated lists (note that only the `Druid` column will be read) of the DRUIDs of the rolls to be batch-processed can be placed in `input/druids/`.
+Finally, text or comma-separated lists (note that only the `Druid` column will be read) of the DRUIDs of the rolls to be batch-processed can be placed in [input/druids/](https://github.com/pianoroll/pianolatron-data/tree/main/input/druids).
 
 ### Usage
 
@@ -45,7 +45,7 @@ will provide a full explanation of the options available. As an example, running
 
 `pipenv run python build-pianolatron-files.py --spell-pitches`
 
-will process all rolls whose DRUIDs are listed in the files under `input/druids/`, and will run the optional enharmonic spelling resolution model.
+will process all rolls whose DRUIDs are listed in the files under [input/druids/](https://github.com/pianoroll/pianolatron-data/tree/main/input/druids), and will run the optional enharmonic spelling resolution model.
 
 ## Credits
 
