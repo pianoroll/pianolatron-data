@@ -177,23 +177,24 @@ def get_metadata_for_druid(druid, redownload_xml):
         "subtitle": get_value_by_xpath("(x:titleInfo/x:subTitle)[1]/text()"),
         "composer": get_value_by_xpaths(
             [
-                "x:name[descendant::x:roleTerm[text()='composer']]/x:namePart[not(@type='date')]/text()",
-                "x:name[descendant::x:roleTerm[text()='Composer']]/x:namePart[not(@type='date')]/text()",
-                "x:name[descendant::x:roleTerm[text()='composer.']]/x:namePart[not(@type='date')]/text()",
-                "x:name[descendant::x:roleTerm[text()='cmp']]/x:namePart[not(@type='date')]/text()",
+                "x:name[@type='personal' and descendant::x:roleTerm[text()='composer']]/x:namePart[not(@type='date')]/text()",
+                "x:name[@type='personal' and descendant::x:roleTerm[text()='Composer']]/x:namePart[not(@type='date')]/text()",
+                "x:name[@type='personal' and descendant::x:roleTerm[text()='composer.']]/x:namePart[not(@type='date')]/text()",
+                "x:name[@type='personal' and descendant::x:roleTerm[text()='cmp']]/x:namePart[not(@type='date')]/text()",
             ]
         ),
         "performer": get_value_by_xpaths(
             [
+                "x:name[@type='personal' and descendant::x:roleTerm[text()='instrumentalist']]/x:namePart[not(@type='date')]/text()",
+                "x:name[@type='personal' and descendant::x:roleTerm[text()='instrumentalist']]/x:namePart[not(@type='date')]/text()",
+                "x:name[@type='personal' and descendant::x:roleTerm[text()='instrumentalist.']]/x:namePart[not(@type='date')]/text()",
                 "x:note[@type='performers']/text()",
-                "x:name[descendant::x:roleTerm[text()='instrumentalist']]/x:namePart[not(@type='date')]/text()",
-                "x:name[descendant::x:roleTerm[text()='instrumentalist.']]/x:namePart[not(@type='date')]/text()",
             ]
         ),
         "arranger": get_value_by_xpaths(
             [
-                "x:name[descendant::x:roleTerm[text()='arranger of music']]/x:namePart[not(@type='date')]/text()",
-                "x:name[descendant::x:roleTerm[text()='arranger']]/x:namePart[not(@type='date')]/text()",
+                "x:name[@type='personal' and descendant::x:roleTerm[text()='arranger of music']]/x:namePart[not(@type='date')]/text()",
+                "x:name[@type='personal' and descendant::x:roleTerm[text()='arranger']]/x:namePart[not(@type='date')]/text()",
             ]
         ),
         "original_composer": get_value_by_xpaths(
@@ -732,6 +733,12 @@ def refine_metadata(metadata):
     # provide descriptions for each roll with some of this metadata, but these
     # files (or descriptions) won't always be available.
 
+    def strip_dates(name):
+        if match := re.match(r"^(.*?),\s?(?:approximately)?\s?[\d]*-[\d]*", name):
+            return match.group(1)
+        else:
+            return name
+
     if metadata["publisher"] == "[publisher not identified]":
         metadata["publisher"] = "N/A"
 
@@ -807,9 +814,9 @@ def refine_metadata(metadata):
     metadata["searchtitle"] = searchtitle.replace(" : ", ": ").replace(" ; ", "; ")
 
     metadata["for_catalog"] = {
-        "composer": composer,
-        "arranger": arranger,
-        "performer": performer,
+        "composer": strip_dates(composer),
+        "arranger": strip_dates(arranger),
+        "performer": strip_dates(performer),
         "work": fulltitle,
     }
 
