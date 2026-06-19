@@ -739,6 +739,12 @@ def refine_metadata(metadata):
         else:
             return name
 
+    def strip_piano(name):
+        if match := re.match(r"^^(.*?),\spiano\.?", name):
+            return match.group(1)
+        else:
+            return name
+
     if metadata["publisher"] == "[publisher not identified]":
         metadata["publisher"] = "N/A"
 
@@ -799,6 +805,7 @@ def refine_metadata(metadata):
         arranger = metadata["arranger"]
 
     if metadata["performer"] is not None:
+        metadata["performer"] = strip_piano(metadata["performer"])
         performer_short = metadata["performer"].split(",")[0].strip()
         if searchtitle is not None:
             searchtitle += "/" + performer_short
