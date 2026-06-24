@@ -169,10 +169,10 @@ def get_metadata_for_druid(druid, redownload_xml):
             "(x:titleInfo[@usage='primary' or not(@usage)]/x:title)[1]/text()"
         ),
         "title_part_number": get_value_by_xpath(
-            "(x:titleInfo[@usage='primary or not(@usage)']/x:partNumber)[1]/text()"
+            "(x:titleInfo[@usage='primary' or not(@usage)]/x:partNumber)[1]/text()"
         ),
         "title_part_name": get_value_by_xpath(
-            "(x:titleInfo[@usage='primary or not(@usage)']/x:partName)[1]/text()"
+            "(x:titleInfo[@usage='primary' or not(@usage)]/x:partName)[1]/text()"
         ),
         "subtitle": get_value_by_xpath("(x:titleInfo/x:subTitle)[1]/text()"),
         "composer": get_value_by_xpaths(
