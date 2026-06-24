@@ -165,14 +165,21 @@ def get_metadata_for_druid(druid, redownload_xml):
         "title_prefix": get_value_by_xpath(
             "(x:titleInfo[@usage='primary' or not(@usage)]/x:nonSort)[1]/text()"
         ),
-        "title": get_value_by_xpath(
-            "(x:titleInfo[@usage='primary' or not(@usage)]/x:title)[1]/text()"
+        "title": get_value_by_xpaths(
+            [
+                "(x:titleInfo[@usage='primary']/x:title)[1]/text()",
+                "(x:titleInfo[@type='alternative']/x:title)[1]/text()",
+                "(x:titleInfo[@type='uniform']/x:title)[1]/text()",
+                "(x:titleInfo/x:title)[1]/text()",
+            ]
         ),
         "title_part_number": get_value_by_xpath(
-            "(x:titleInfo[@usage='primary' or not(@usage)]/x:partNumber)[1]/text()"
+            "(x:titleInfo[@usage='primary']/x:partNumber)[1]/text()",
         ),
-        "title_part_name": get_value_by_xpath(
-            "(x:titleInfo[@usage='primary' or not(@usage)]/x:partName)[1]/text()"
+        "title_part_name": get_value_by_xpaths(
+            [
+                "(x:titleInfo[@usage='primary']/x:partName)[1]/text()",
+            ]
         ),
         "subtitle": get_value_by_xpath("(x:titleInfo/x:subTitle)[1]/text()"),
         "composer": get_value_by_xpaths(
