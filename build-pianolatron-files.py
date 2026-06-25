@@ -102,6 +102,7 @@ def get_metadata_for_druid(druid, redownload_xml):
         xml_data = xml_filepath.open("r", encoding="utf-8").read()
 
     catkey = None
+    object_label = None
     # Manually parse out the catkey from the identityMetadata section, which
     # doesn't have an associated xmlns, making it difficult to parse with lxml
     identity_xml = xml_data.split(r"<identityMetadata")[1].split(
@@ -119,6 +120,11 @@ def get_metadata_for_druid(druid, redownload_xml):
         )
     else:
         logging.error(f"Unable to find catkey for {druid}")
+
+    if identity_xml.find("objectLabel") != -1:
+        object_label = identity_xml.split(r"<objectLabel>")[1].split(r"</objectLabel>")[
+            0
+        ]
 
     try:
         mods_xml = (
@@ -162,8 +168,11 @@ def get_metadata_for_druid(druid, redownload_xml):
                 roll_type = ROLL_TYPES[note.text]
 
     metadata = {
-        "title_prefix": get_value_by_xpath(
-            "(x:titleInfo[@usage='primary' or not(@usage)]/x:nonSort)[1]/text()"
+        "title_prefix": get_value_by_xpaths(
+            [
+                "(x:titleInfo[@usage='primary']/x:nonSort)[1]/text()",
+                "(x:titleInfo/x:nonSort)[1]/text()",
+            ]
         ),
         "title": get_value_by_xpaths(
             [
@@ -176,10 +185,8 @@ def get_metadata_for_druid(druid, redownload_xml):
         "title_part_number": get_value_by_xpath(
             "(x:titleInfo[@usage='primary']/x:partNumber)[1]/text()",
         ),
-        "title_part_name": get_value_by_xpaths(
-            [
-                "(x:titleInfo[@usage='primary']/x:partName)[1]/text()",
-            ]
+        "title_part_name": get_value_by_xpath(
+            "(x:titleInfo[@usage='primary']/x:partName)[1]/text()",
         ),
         "subtitle": get_value_by_xpath("(x:titleInfo/x:subTitle)[1]/text()"),
         "composer": get_value_by_xpaths(
@@ -254,6 +261,7 @@ def get_metadata_for_druid(druid, redownload_xml):
         "type": roll_type,
         "PURL": PURL_BASE + druid,
         "catkey": catkey,
+        "object_label": object_label,
     }
 
     # Derive the value for the IIIF info.json file URL, which is eventually
@@ -820,10 +828,17 @@ def refine_metadata(metadata):
             searchtitle = performer_short
         performer = metadata["performer"]
 
-    if searchtitle is not None:
-        searchtitle += " - " + fulltitle
+    # The objectLabel probably should override most other title contents
+    if metadata["object_label"] is not None:
+        if searchtitle is not None:
+            searchtitle += " - " + metadata["object_label"]
+        else:
+            searchtitle = metadata["object_label"]
     else:
-        searchtitle = fulltitle
+        if searchtitle is not None:
+            searchtitle += " - " + fulltitle
+        else:
+            searchtitle = fulltitle
 
     metadata["searchtitle"] = searchtitle.replace(" : ", ": ").replace(" ; ", "; ")
 
