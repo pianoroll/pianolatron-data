@@ -828,8 +828,12 @@ def refine_metadata(metadata):
             searchtitle = performer_short
         performer = metadata["performer"]
 
+    fulltitle = " ".join(fulltitle.split())
+
     # The objectLabel probably should override most other title contents
     if metadata["object_label"] is not None:
+        metadata["object_label"] = " ".join(metadata["object_label"].split())
+
         if searchtitle is not None:
             searchtitle += " - " + metadata["object_label"]
         else:
@@ -840,7 +844,9 @@ def refine_metadata(metadata):
         else:
             searchtitle = fulltitle
 
-    metadata["searchtitle"] = searchtitle.replace(" : ", ": ").replace(" ; ", "; ")
+    metadata["searchtitle"] = " ".join(
+        searchtitle.replace(" : ", ": ").replace(" ; ", "; ").split()
+    )
 
     metadata["for_catalog"] = {
         "composer": strip_dates(composer),
