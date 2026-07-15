@@ -13,13 +13,17 @@ import json
 import logging
 import re
 from csv import DictReader
+from datetime import date
 from pathlib import Path
 from shutil import copy
+from urllib.parse import quote, urlsplit, urlunsplit
+from xml.sax.saxutils import escape
 
 import requests
 from lxml import etree
 from mido import MidiFile, tempo2bpm
 
+PIANOLATRON_URL = "https://pianolatron.stanford.edu"
 WRITE_TEMPO_MAPS = False
 
 # These are either duplicates of existing rolls, or rolls that are listed in
@@ -65,6 +69,32 @@ STACKS_BASE = "https://stacks.stanford.edu/file/"
 MIDI_DIR = "midi"
 TXT_DIR = "input/txt"
 NS = {"x": "http://www.loc.gov/mods/v3"}
+
+
+def prepare_url_for_sitemap(url):
+    parsed = urlsplit(url)
+
+    encoded_path = quote(parsed.path)
+    encoded_query = quote(parsed.query, safe="=&")
+
+    encoded_url = urlunsplit(
+        (parsed.scheme, parsed.netloc, encoded_path, encoded_query, parsed.fragment)
+    )
+
+    xml_escaped_url = escape(encoded_url, {"'": "&apos;", '"': "&quot;"})
+
+    return xml_escaped_url
+
+
+def add_page_to_sitemap(url, sitemap_root, current_date, priority=0.8):
+    sitemap_url = etree.SubElement(sitemap_root, "url")
+    sitemap_loc = etree.SubElement(sitemap_url, "loc")
+    druid_url = prepare_url_for_sitemap(url)
+    sitemap_loc.text = druid_url
+    sitemap_lastmod = etree.SubElement(sitemap_url, "lastmod")
+    sitemap_lastmod.text = current_date
+    sitemap_priority = etree.SubElement(sitemap_url, "priority")
+    sitemap_priority.text = str(priority)
 
 
 def get_metadata_for_druid(druid, redownload_xml):
@@ -963,6 +993,12 @@ def main():
         model = PKSpell()
         model.load_state_dict(torch.load(Path("pkspell/pkspell_statedict.pt")))
 
+    # Begin producing XML for sitemap
+    sitemap_root = etree.Element(
+        "urlset", xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+    )
+    current_date = date.today().isoformat()
+
     for druid in druids:
         if druid in druids_processed:
             logging.info(f"Duplicate DRUID, skipping: {druid}")
@@ -1050,6 +1086,12 @@ def main():
 
         write_json(druid, metadata)
 
+        add_page_to_sitemap(
+            f"{PIANOLATRON_URL}/?druid={druid}",
+            sitemap_root,
+            current_date,
+        )
+
         druids_processed.add(druid)
 
         if not args.no_catalog:
@@ -1080,6 +1122,21 @@ def main():
                 sort_keys=True,
             )
             catalog_file.write("\n")
+
+    # Add some other pages to the sitemap
+    pianolatron_pages = ["howto", "controllers", "credits", "search"]
+    for page_slug in pianolatron_pages:
+        add_page_to_sitemap(
+            f"{PIANOLATRON_URL}/{page_slug}", sitemap_root, current_date, priority=0.9
+        )
+
+    etree.indent(sitemap_root, space="  ")
+    sitemap_tree = etree.ElementTree(sitemap_root)
+    sitemap_tree.write(
+        f"output/pianolatron_sitemap_{current_date}.xml",
+        encoding="utf-8",
+        xml_declaration=True,
+    )
 
 
 if __name__ == "__main__":
