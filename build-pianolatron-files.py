@@ -868,6 +868,14 @@ def refine_metadata(metadata):
             searchtitle += " - " + metadata["object_label"]
         else:
             searchtitle = metadata["object_label"]
+
+        # Try shoehorning in the part number here -- could get messy though
+        if (
+            metadata["title_part_number"] is not None
+            and searchtitle.find(metadata["title_part_number"]) == -1
+        ):
+            searchtitle = f"{searchtitle}: {metadata['title_part_number']}"
+
     else:
         if searchtitle is not None:
             searchtitle += " - " + fulltitle
@@ -967,7 +975,7 @@ def main():
         druids.extend(get_druids_from_csv_files())
         druids.extend(get_druids_from_txt_files())
 
-    # Override cmd line or CSV (or TXT) DRUIDs lists
+    # This would override the cmd line or CSV (or TXT) DRUIDs lists
     # druids = ["hb523vs3190"]
 
     catalog_entries = []
@@ -1130,6 +1138,7 @@ def main():
             f"{PIANOLATRON_URL}/{page_slug}", sitemap_root, current_date, priority=0.9
         )
 
+    # Save the sitemap
     etree.indent(sitemap_root, space="  ")
     sitemap_tree = etree.ElementTree(sitemap_root)
     sitemap_tree.write(
