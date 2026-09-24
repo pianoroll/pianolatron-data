@@ -43,6 +43,9 @@ ROLLS_TO_SKIP = [
     "sm367hr9769",  # Image(s) seem to be corrupted
 ]
 
+# Useful when semi-manually adding rolls that have no available XML metadata records
+ROLL_TYPE_OVERRIDES = {"jr540qn0805": "duo-art"}
+
 ROLL_TYPES = {
     "Welte-Mignon red roll (T-100)": "welte-red",
     "Welte-Mignon red roll (T-100).": "welte-red",
@@ -957,6 +960,11 @@ def main():
         action="store_true",
         help="Estimate correct enharmonic pitch names and include in output (requires PyTorch)",
     )
+    argparser.add_argument(
+        "--no-metadata",
+        action="store_true",
+        help="Don't try to download or parse rolls' metadata from XML",
+    )
 
     args = argparser.parse_args()
 
@@ -1016,12 +1024,35 @@ def main():
             logging.info(f"Skipping DRUID {druid}")
             continue
 
-        metadata = get_metadata_for_druid(druid, args.redownload_xml)
-        if metadata is None:
-            logging.info(f"Unable to get metadata for DRUID {druid}, skipping")
-            continue
+        if args.no_metadata:
+            roll_type = ROLL_TYPE_OVERRIDES.get(druid, "NA")
+            metadata = {
+                "druid": druid,
+                "catkey": "",
+                "title": "",
+                "composer": "",
+                "performer": "",
+                "arranger": "",
+                "work": "",
+                "image_url": "",
+                "type": roll_type,
+                "number": "",
+                "publisher": "",
+                "searchtitle": "",
+                "for_catalog": {
+                    "composer": "",
+                    "arranger": "",
+                    "performer": "",
+                    "work": "",
+                },
+            }
+        else:
+            metadata = get_metadata_for_druid(druid, args.redownload_xml)
+            if metadata is None:
+                logging.info(f"Unable to get metadata for DRUID {druid}, skipping")
+                continue
 
-        metadata = refine_metadata(metadata)
+            metadata = refine_metadata(metadata)
 
         logging.info(f"Processing {druid}, roll type is {metadata['type']}...")
 
@@ -1076,7 +1107,7 @@ def main():
 
             logging.info(f"Calculating enharmonic spellings for {len(p_list)} notes")
 
-            spellings, key_signatures = single_piece_predict(
+            spellings, _key_signatures = single_piece_predict(
                 p_list, d_list, model, device
             )
 
