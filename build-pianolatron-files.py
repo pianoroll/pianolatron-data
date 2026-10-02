@@ -12,6 +12,7 @@ import argparse
 import json
 import logging
 import re
+import xml.etree.ElementTree as ET
 from csv import DictReader
 from datetime import date
 from pathlib import Path
@@ -44,7 +45,7 @@ ROLLS_TO_SKIP = [
 ]
 
 # Useful when semi-manually adding rolls that have no available XML metadata records
-ROLL_TYPE_OVERRIDES = {"jr540qn0805": "duo-art"}
+ROLL_TYPE_OVERRIDES = {"jr540qn0805": "duo-art", "tq889qw1270da": "duo-art"}
 
 ROLL_TYPES = {
     "Welte-Mignon red roll (T-100)": "welte-red",
@@ -159,6 +160,23 @@ def get_metadata_for_druid(druid, redownload_xml):
             0
         ]
 
+    content_xml = xml_data.split(r"<contentMetadata")[1].split(r"</contentMetadata>")[0]
+
+    file_entries = []
+    for line in content_xml.split("\n"):
+        if line.find("<file") != -1:
+            xml_line = re.sub(r">$", "/>", line)
+            print("Parsing line", xml_line)
+            line_xml = ET.fromstring(xml_line)
+            file_entries.append(
+                {
+                    "filename": line_xml.get("id"),
+                    "size": line_xml.get("size"),
+                    "mime_type": line_xml.get("mimetype"),
+                    "is_public": line_xml.get("publish"),
+                }
+            )
+
     try:
         mods_xml = (
             "<mods" + xml_data.split(r"<mods")[1].split(r"</mods>")[0] + "</mods>"
@@ -166,7 +184,7 @@ def get_metadata_for_druid(druid, redownload_xml):
         xml_tree = etree.fromstring(mods_xml)
     except etree.XMLSyntaxError:
         logging.error(
-            f"Unable to parse XML metadata for {druid} - record is likely missing."
+            f"Unable to parse MODS metadata for {druid} - record is likely missing."
         )
         return None
 
@@ -324,6 +342,8 @@ def get_metadata_for_druid(druid, redownload_xml):
         f"https://stacks.stanford.edu/image/iiif/{image_id.split('_')[0]}/{image_id}/info.json"
     )
 
+    metadata["file_entries"] = file_entries
+
     return metadata
 
 
@@ -332,7 +352,7 @@ def build_tempo_map_from_midi(druid):
     roll specified by the input DRUID and return it as a list of timings and
     tempos."""
 
-    midi_filepath = Path(f"output/midi/{druid}.mid")
+    midi_filepath = Path(f"output/midi/{druid}_note.mid")
     midi = MidiFile(midi_filepath)
 
     tempo_map = []
@@ -354,7 +374,7 @@ def merge_midi_velocities(roll_data, hole_data, druid, roll_type):
     output file for use when highlighting the note holes in the roll when it is
     displayed in the Pianolatron app."""
 
-    midi_filepath = Path(f"output/midi/exp/{druid}.mid")
+    midi_filepath = Path(f"output/midi/exp/{druid}_exp.mid")
 
     if not midi_filepath.exists():
         logging.info(
@@ -908,8 +928,8 @@ def main():
         description="""Generate per-roll DRUID.json files as well as a
                        comprehensive catalog.json file that describes all rolls
                        processed, and place these files, along with the 
-                       desired MIDI file type (_note or _exp) as DRUID.mid in
-                       the local output/json/ and output/midi/ folders.
+                       desired MIDI file type (_note or _exp) as DRUID_TYPE.mid
+                       in the local output/json/ and output/midi/ folders.
                        DRUIDs of rolls to be processed can be specified as a
                        space-delimited list on the command line, in a text file
                        with one DRUID per line (using the -f option), or in
@@ -1058,20 +1078,20 @@ def main():
 
         copy(
             Path(f"{args.midi_source_dir}/note/{druid}_note.mid"),
-            Path(f"output/midi/note/{druid}.mid"),
+            Path(f"output/midi/note/{druid}_note.mid"),
         )
-        note_midi = MidiFile(Path(f"output/midi/note/{druid}.mid"))
+        note_midi = MidiFile(Path(f"output/midi/note/{druid}_note.mid"))
         metadata["NOTE_MIDI_TPQ"] = note_midi.ticks_per_beat
 
         if metadata["type"] == "65-note":
             copy(
                 Path(f"{args.midi_source_dir}/exp/{druid}_note.mid"),
-                Path(f"output/midi/exp/{druid}.mid"),
+                Path(f"output/midi/exp/{druid}_note.mid"),
             )
         else:
             copy(
                 Path(f"{args.midi_source_dir}/exp/{druid}_exp.mid"),
-                Path(f"output/midi/exp/{druid}.mid"),
+                Path(f"output/midi/exp/{druid}_exp.mid"),
             )
 
         if WRITE_TEMPO_MAPS:
