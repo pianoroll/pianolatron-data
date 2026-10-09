@@ -166,7 +166,6 @@ def get_metadata_for_druid(druid, redownload_xml):
     for line in content_xml.split("\n"):
         if line.find("<file") != -1:
             xml_line = re.sub(r">$", "/>", line)
-            print("Parsing line", xml_line)
             line_xml = ET.fromstring(xml_line)
             file_entries.append(
                 {
@@ -329,7 +328,7 @@ def get_metadata_for_druid(druid, redownload_xml):
         # The relevant line in the Cocina XML is
         # <file id="hd490vp4338_0001_Color.jp2" mimetype="image/jp2" size="496405974" publish="yes" shelve="yes" preserve="no">
         image_id_match = re.search(
-            r"<file id=\"(.*?_Color)\.jp2",
+            r"<file id=\"([^\"]*?_Color)\.jp2\"",
             xml_data,
             re.MULTILINE | re.DOTALL,
         )
