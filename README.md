@@ -43,9 +43,9 @@ Finally, text or comma-separated lists (note that only the `Druid` column will b
 
 will provide a full explanation of the options available. As an example, running
 
-`pipenv run python build-pianolatron-files.py --spell-pitches`
+`pipenv run python build-pianolatron-files.py --no-spell-pitches`
 
-will process all rolls whose DRUIDs are listed in the files under [input/druids/](https://github.com/pianoroll/pianolatron-data/tree/main/input/druids), and will run the optional enharmonic spelling resolution model.
+will process all rolls whose DRUIDs are listed in the files under [input/druids/](https://github.com/pianoroll/pianolatron-data/tree/main/input/druids), and will not run the default enharmonic spelling resolution model.
 
 ## Credits
 
