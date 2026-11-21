@@ -960,6 +960,11 @@ def main():
         help="Do not generate a new catalog.json (preexisting file will remain)",
     )
     argparser.add_argument(
+        "--catalog-in-place",
+        action="store_true",
+        help="Use existing catalog.json file, modifying only changed records",
+    )
+    argparser.add_argument(
         "--redownload-xml",
         action="store_true",
         help="Always download XML files, overwriting files in input/xml/",
@@ -975,9 +980,9 @@ def main():
         help="Folder containg hole analysis output files (DRUID.txt)",
     )
     argparser.add_argument(
-        "--spell-pitches",
+        "--no-spell-pitches",
         action="store_true",
-        help="Estimate correct enharmonic pitch names and include in output (requires PyTorch)",
+        help="Don't estimate correct enharmonic pitch names and include in output (requires PyTorch)",
     )
     argparser.add_argument(
         "--no-metadata",
@@ -1005,11 +1010,15 @@ def main():
     # This would override the cmd line or CSV (or TXT) DRUIDs lists
     # druids = ["hb523vs3190"]
 
-    catalog_entries = []
+    if args.catalog_in_place:
+        with open("output/catalog.json", "r", encoding="utf8") as catalog_file:
+            catalog_entries = json.load(catalog_file)
+    else:
+        catalog_entries = []
 
     druids_processed = set()
 
-    if args.spell_pitches:
+    if not args.no_spell_pitches:
         import sys
 
         import torch
@@ -1115,7 +1124,7 @@ def main():
         else:
             metadata["holeData"] = None
 
-        if metadata["holeData"] is not None and args.spell_pitches is True:
+        if metadata["holeData"] is not None and args.no_spell_pitches is False:
             p_list = []
             d_list = []
             for hole in metadata["holeData"]:
@@ -1153,21 +1162,31 @@ def main():
         druids_processed.add(druid)
 
         if not args.no_catalog:
-            catalog_entries.append(
-                {
-                    "druid": druid,
-                    "catkey": metadata["catkey"],
-                    "title": metadata["searchtitle"],
-                    "composer": metadata["for_catalog"]["composer"],
-                    "performer": metadata["for_catalog"]["performer"],
-                    "arranger": metadata["for_catalog"]["arranger"],
-                    "work": metadata["for_catalog"]["work"],
-                    "image_url": metadata["image_url"],
-                    "type": metadata["type"],
-                    "number": metadata["number"],
-                    "publisher": metadata["publisher"],
-                }
-            )
+            updated_entry = {
+                "druid": druid,
+                "catkey": metadata["catkey"],
+                "title": metadata["searchtitle"],
+                "composer": metadata["for_catalog"]["composer"],
+                "performer": metadata["for_catalog"]["performer"],
+                "arranger": metadata["for_catalog"]["arranger"],
+                "work": metadata["for_catalog"]["work"],
+                "image_url": metadata["image_url"],
+                "type": metadata["type"],
+                "number": metadata["number"],
+                "publisher": metadata["publisher"],
+            }
+
+            if args.catalog_in_place:
+                entry_found = False
+                for e, entry in enumerate(catalog_entries):
+                    if entry["druid"] == druid:
+                        catalog_entries[e] = updated_entry
+                        entry_found = True
+                        break
+                if entry_found is not True:
+                    catalog_entries.append(updated_entry)
+            else:
+                catalog_entries.append(updated_entry)
 
     if not args.no_catalog:
         sorted_catalog = sorted(catalog_entries, key=lambda i: i["title"])
@@ -1192,7 +1211,7 @@ def main():
     etree.indent(sitemap_root, space="  ")
     sitemap_tree = etree.ElementTree(sitemap_root)
     sitemap_tree.write(
-        f"output/pianolatron_sitemap_{current_date}.xml",
+        "output/pianolatron_sitemap.xml",
         encoding="utf-8",
         xml_declaration=True,
     )
