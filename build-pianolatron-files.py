@@ -1189,7 +1189,10 @@ def main():
                 catalog_entries.append(updated_entry)
 
     if not args.no_catalog:
-        sorted_catalog = sorted(catalog_entries, key=lambda i: i["title"])
+        if args.catalog_in_place:
+            sorted_catalog = catalog_entries
+        else:
+            sorted_catalog = sorted(catalog_entries, key=lambda i: i["title"])
         with open("output/catalog.json", "w", encoding="utf8") as catalog_file:
             json.dump(
                 sorted_catalog,
